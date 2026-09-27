@@ -79,6 +79,7 @@ python3 -m http.server 8000
 index.html   アプリ本体（HTML・CSS・JavaScript をこの1ファイルにまとめています）
 og.png       SNS でシェアしたときのプレビュー画像（1200×630）
 README.md    このファイル
+tools/og.html  og.png の元になる HTML（作り直す手順は CLAUDE.md）
 CLAUDE.md    Claude Code 向けの作業メモ
 LICENSE      MIT License
 ```

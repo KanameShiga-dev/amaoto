@@ -66,3 +66,14 @@ https://<user>.github.io/<repo>/
 | `RAIN` / `RADAR` | 雨の強さの呼び方と色帯 |
 
 場所を追加するときは、`SURF`・`GEN`・情景の描画（`layoutExtra` と `draw*`）の3か所をそろえて変更してください。
+
+## OGP 画像（og.png）の作り直し
+
+`tools/og.html` を 1200×630 で撮影したものが `og.png` です。乱数のシードを固定しているので、同じ HTML からは同じ絵になります。
+Windows では Edge のヘッドレスモードで撮影します（Web フォントの読み込みを待つため `--virtual-time-budget` を付ける）。
+
+```powershell
+& "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --virtual-time-budget=8000 "--user-data-dir=$env:TEMP\og-prof" "--screenshot=$PWD\og.png" "file:///$($PWD -replace '\\','/')/tools/og.html"
+```
+
+撮影後は画像を目で見て、文字の切れ・フォントの反映を確認してから commit してください。
