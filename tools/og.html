@@ -17,7 +17,7 @@ canvas{position:absolute;inset:0}
 .places b{color:var(--andon);font-weight:500}
 .strip{margin:30px 0 0;display:flex;align-items:center;gap:16px;font-family:"DM Mono",monospace;font-size:17px;color:var(--nezu)}
 .strip i{display:block;width:300px;height:7px;border-radius:1px}
-.foot{position:absolute;left:72px;bottom:44px;font-size:16px;letter-spacing:.12em;color:var(--nezu)}
+.foot{margin:24px 0 0;font-size:17px;letter-spacing:.12em;color:var(--nezu)}
 </style>
 </head>
 <body>
@@ -28,8 +28,9 @@ canvas{position:absolute;inset:0}
     <p class="copy">雨が当たる場所と強さを選んで、<br>雨音を聴く。</p>
     <p class="places">窓ガラス・番傘・トタン屋根・瓦・テント…　<b>12か所</b></p>
     <div class="strip"><i id="strip"></i><span>0.5–100 mm/h</span></div>
+    <!-- 左下は X のカードでドメイン名が重なるため、何も置かない -->
+    <p class="foot">音は録音ではなく、ブラウザの中でひと粒ずつ合成</p>
   </div>
-  <p class="foot">音は録音ではなく、ブラウザの中でひと粒ずつ合成</p>
 </div>
 <script>
 // 決定的な乱数（毎回同じ絵になるように）
