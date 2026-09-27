@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>雨音</title>
+<meta name="description" content="傘・屋根・地面・家まわり・自然の12か所に雨が当たる音を、雨の強さ（mm/h）を選んでブラウザ内で合成して聴くアプリ。">
+<meta name="theme-color" content="#161C20">
+<meta property="og:type" content="website">
+<meta property="og:title" content="雨音">
+<meta property="og:description" content="番傘、トタン屋根、瓦、窓ガラス、テント……。雨が当たる場所と強さを選んで、雨音を聴く。音はすべてブラウザ内で合成。">
+<meta property="og:url" content="https://kanameshiga-dev.github.io/amaoto/">
+<meta property="og:image" content="https://kanameshiga-dev.github.io/amaoto/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="雨音">
+<meta name="twitter:description" content="雨が当たる場所と強さを選んで、雨音を聴く。音はすべてブラウザ内で合成。">
+<meta name="twitter:image" content="https://kanameshiga-dev.github.io/amaoto/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{
+  color-scheme: dark;
+  --sumi:#161C20;
+  --panel:#1C2328;
+  --line:#33404A;
+  --gin:#DCE2E2;
+  --nezu:#8C9BA1;
+  --andon:#D8B46A;
+  --andon-soft:rgba(216,180,106,.10);
+  --sky1:#1E272C;
+  --sky2:#11171A;
+  --mincho:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --gothic:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+html,body{height:100%}
+body{background:var(--sumi);color:var(--gin);font-family:var(--gothic);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 410px;height:100%}
+
+/* scene */
+.scene{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--sky1),var(--sky2));min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mark{position:absolute;top:22px;left:22px;margin:0;display:flex;gap:10px;align-items:flex-start;pointer-events:none}
+.mark-kanji{display:flex;flex-direction:column;gap:.12em;font-family:var(--mincho);font-weight:700;font-size:clamp(42px,5.4vw,66px);line-height:1;color:var(--gin)}
+.mark-kana{writing-mode:vertical-rl;font-family:var(--mincho);font-weight:500;font-size:12px;letter-spacing:.5em;color:var(--nezu);padding-top:.4em}
+.now{position:absolute;left:22px;bottom:16px;margin:0;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--nezu);pointer-events:none;font-variant-numeric:tabular-nums}
+.now b{color:var(--gin);font-weight:500}
+
+/* panel */
+.panel{overflow-y:auto;padding-block:28px 24px;padding-inline:28px;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:30px}
+.label{margin:0 0 12px;font-size:12px;font-weight:500;letter-spacing:.22em;color:var(--nezu)}
+
+.transport{display:flex;align-items:center;gap:18px}
+.play{display:flex;align-items:center;gap:14px;background:none;border:0;padding:0;cursor:pointer}
+.play-disc{width:60px;height:60px;border-radius:50%;border:1px solid var(--andon);display:grid;place-items:center;color:var(--andon);transition:background .2s}
+.play:hover .play-disc{background:var(--andon-soft)}
+.play[aria-pressed="true"] .play-disc{background:var(--andon);color:var(--sumi)}
+.play-disc svg{width:20px;height:20px;fill:currentColor}
+.play-text{font-family:var(--mincho);font-size:20px;font-weight:500;letter-spacing:.12em;min-width:4em;text-align:left}
+.play:focus-visible{outline:none}
+.play:focus-visible .play-disc{outline:2px solid var(--andon);outline-offset:3px}
+.vol{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.vol span{font-size:11px;letter-spacing:.2em;color:var(--nezu)}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:24px;background:transparent;margin:0;cursor:pointer;position:relative}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--track,var(--line));border-radius:2px}
+input[type=range]::-moz-range-track{height:4px;background:var(--track,var(--line));border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;box-sizing:border-box;width:18px;height:18px;border-radius:50%;background:var(--gin);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--nezu);margin-top:-7px}
+input[type=range]::-moz-range-thumb{box-sizing:border-box;width:18px;height:18px;border-radius:50%;background:var(--gin);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--nezu)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 2px var(--andon)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 2px var(--andon)}
+
+.readout{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.mm{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mm b{font-size:44px;font-weight:400;line-height:1;letter-spacing:-.02em}
+.mm small{font-size:13px;color:var(--nezu);margin-left:4px}
+.term{font-family:var(--mincho);font-size:22px;font-weight:700;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
+.term i{width:10px;height:10px;border-radius:2px;display:inline-block;background:var(--dot,#0041FF)}
+.rain-wrap{position:relative;height:24px}
+#rain{--track:transparent;z-index:1}
+.strip{position:absolute;left:9px;right:9px;top:9px;height:6px;border-radius:1px;opacity:.9}
+.ticks{position:relative;height:16px;margin:4px 9px 0;font-family:var(--mono);font-size:10.5px;color:var(--nezu);font-variant-numeric:tabular-nums}
+.ticks span{position:absolute;top:0;transform:translateX(-50%)}
+.feel{margin:12px 0 0;font-size:13.5px;color:var(--gin);opacity:.82;min-height:3.4em;max-width:36em}
+
+.group+.group{margin-top:14px}
+.group h3{margin:0 0 6px;font-family:var(--mincho);font-weight:500;font-size:14px;letter-spacing:.1em;color:var(--nezu)}
+.opts{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.opt{background:transparent;border:1px solid var(--line);border-radius:6px;padding:9px 10px 8px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:1px;transition:border-color .15s,background .15s;min-width:0}
+.opt:hover{border-color:var(--nezu)}
+.opt:focus-visible{outline:2px solid var(--andon);outline-offset:2px}
+.opt[aria-pressed="true"]{border-color:var(--andon);background:var(--andon-soft)}
+.opt .n{font-family:var(--mincho);font-weight:700;font-size:16px;letter-spacing:.04em;line-height:1.35;overflow-wrap:anywhere}
+.opt .y{font-size:10.5px;color:var(--nezu);letter-spacing:.06em;overflow-wrap:anywhere}
+
+.about{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.where{font-size:12px;color:var(--nezu);letter-spacing:.1em}
+.where b{color:var(--andon);font-weight:500;margin-left:6px;letter-spacing:.06em}
+.about p{margin:0;font-size:13.5px;max-width:36em}
+
+.seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:transparent;border:0;border-left:1px solid var(--line);padding:8px 0;cursor:pointer;font-size:13px;font-variant-numeric:tabular-nums}
+.seg button:first-child{border-left:0}
+.seg button:hover{background:rgba(220,226,226,.05)}
+.seg button[aria-pressed="true"]{background:var(--andon);color:var(--sumi);font-weight:500}
+.seg button:focus-visible{outline:2px solid var(--andon);outline-offset:-2px}
+.remain{margin:8px 0 0;font-family:var(--mono);font-size:12px;color:var(--nezu);min-height:1.7em;font-variant-numeric:tabular-nums}
+
+.note{margin:auto 0 0;font-size:11.5px;line-height:1.7;color:var(--nezu);max-width:36em}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{display:block;height:auto}
+  .scene{height:46svh;min-height:300px}
+  .panel{border-left:0;border-top:1px solid var(--line);padding-inline:16px;padding-block:24px 32px;overflow:visible}
+  .mark{top:16px;left:16px}
+  .now{left:16px;bottom:12px}
+}
+@media (max-width:360px){
+  .opts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="scene" id="scene" aria-label="雨が当たる様子">
+    <canvas id="cv" aria-hidden="true"></canvas>
+    <h1 class="mark" aria-label="雨音"><span class="mark-kanji"><span>雨</span><span>音</span></span><span class="mark-kana" aria-hidden="true">あまおと</span></h1>
+    <p class="now" id="now"></p>
+  </section>
+
+  <aside class="panel">
+    <div class="transport">
+      <button class="play" id="play" aria-pressed="false">
+        <span class="play-disc">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path id="playIcon" d="M8 5.5v13l10.5-6.5z"/></svg>
+        </span>
+        <span class="play-text" id="playText">聴く</span>
+      </button>
+      <label class="vol" for="vol"><span>音量</span><input type="range" id="vol" min="0" max="100" value="70"></label>
+    </div>
+
+    <section>
+      <h2 class="label">雨の強さ</h2>
+      <div class="readout">
+        <span class="mm"><b id="mmNum">12</b><small>mm/h</small></span>
+        <span class="term" id="term"><i id="dot"></i><span id="termText">やや強い雨</span></span>
+      </div>
+      <div class="rain-wrap">
+        <div class="strip" id="strip" aria-hidden="true"></div>
+        <input type="range" id="rain" min="0" max="1000" value="600" aria-label="雨の強さ（1時間あたりの雨量）">
+      </div>
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+      <p class="feel" id="feel"></p>
+    </section>
+
+    <section>
+      <h2 class="label">雨が当たる場所</h2>
+      <div id="groups"></div>
+      <div class="about">
+        <span class="where">聴く位置<b id="place">傘の下</b></span>
+        <p id="desc"></p>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="label">おやすみタイマー</h2>
+      <div class="seg" id="seg" role="group" aria-label="おやすみタイマー">
+        <button data-min="0" aria-pressed="true">オフ</button>
+        <button data-min="15" aria-pressed="false">15分</button>
+        <button data-min="30" aria-pressed="false">30分</button>
+        <button data-min="60" aria-pressed="false">60分</button>
+      </div>
+      <p class="remain" id="remain"></p>
+    </section>
+
+    <p class="note">音は録音ではなく、ブラウザの中で一粒ずつ合成しています。10 mm/h 以上の降り方の表現は気象庁「雨の強さと降り方」から、強さの色帯は気象庁の降水強度の配色にならっています。</p>
+  </aside>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const TAU=Math.PI*2;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+/* ---------- 雨の強さ ---------- */
+const MIN_MM=0.5, SPAN=200;
+const mmFromV=v=>MIN_MM*Math.pow(SPAN,v/1000);
+const vFromMm=m=>Math.round(1000*Math.log(m/MIN_MM)/Math.log(SPAN));
+const posOf=m=>Math.log(m/MIN_MM)/Math.log(SPAN);
+const RADAR=[[0.5,1,'#F2F2FF'],[1,5,'#A0D2FF'],[5,10,'#218CFF'],[10,20,'#0041FF'],[20,30,'#FAF500'],[30,50,'#FF9900'],[50,80,'#FF2800'],[80,100,'#B40068']];
+const RAIN=[
+  {max:1,term:'小雨',feel:'しとしと。音より先に、濡れた匂いで気づく程度。'},
+  {max:3,term:'弱い雨',feel:'ぽつぽつ。一粒ずつの音が聞き分けられる。'},
+  {max:10,term:'本降り',feel:'さあさあと切れ目なく降る。傘が手放せない。'},
+  {max:20,term:'やや強い雨',feel:'ザーザーと降る。地面からの跳ね返りで足元がぬれる。'},
+  {max:30,term:'強い雨',feel:'どしゃ降り。傘をさしていてもぬれる。'},
+  {max:50,term:'激しい雨',feel:'バケツをひっくり返したように降る。道路が川のようになる。'},
+  {max:80,term:'非常に激しい雨',feel:'滝のように降る（ゴーゴーと降り続く）。傘は全く役に立たなくなる。'},
+  {max:Infinity,term:'猛烈な雨',feel:'息苦しくなるような圧迫感がある。恐怖を感ずる。'},
+];
+
+/* ---------- 場所 ---------- */
+const GROUPS=[['kasa','傘'],['yane','屋根'],['jimen','地面'],['ie','家まわり'],['shizen','自然']];
+const SURF={
+  bangasa:{g:'kasa',name:'番傘',yomi:'ばんがさ',place:'傘の下',desc:'竹の骨に油をひいた和紙。張った紙が小さな太鼓のように鳴り、ぼとぼとと低く柔らかい。',
+    rate:.9,near:.62,far:.2,farLP:1800,farBank:'asphalt',bed:[['lowpass',1100,.7],['peaking',260,1,5]],bedG:.5,tone:16000,send:.06,width:.55,pitch:[.85,1.12]},
+  vinyl:{g:'kasa',name:'ビニール傘',yomi:'びにーるがさ',place:'傘の下',desc:'ぴんと張った薄いビニールが小さな太鼓のように鳴る。ボツボツ、バラバラと粒の大きい音。',
+    rate:.75,near:.55,far:.2,farLP:1800,farBank:'asphalt',bed:[['highpass',250,.7],['peaking',800,1,3],['lowpass',4000,.7]],bedG:.42,tone:12000,send:.05,width:.6,pitch:[.88,1.12]},
+  shinshi:{g:'kasa',name:'紳士傘',yomi:'しんしがさ',place:'傘の下',desc:'目の詰んだポリエステルの布。粒の音がこもり、トントンと落ち着いて響く。',
+    rate:1.05,near:.55,far:.2,farLP:1800,farBank:'asphalt',bed:[['highpass',250,.7],['lowpass',3200,.7]],bedG:.45,tone:14000,send:.06,width:.6,pitch:[.9,1.12]},
+  totan:{g:'yane',name:'トタン屋根',yomi:'とたんやね',place:'室内',desc:'波板の鉄板。薄い板が一粒ごとにボツボツと鳴り、強い雨ではバラバラと部屋ごと包む音になる。',
+    rate:1,near:.45,far:.22,farLP:1800,bed:[['highpass',200,.7],['peaking',900,1,3],['lowpass',3500,.7]],bedG:.55,tone:5000,send:.16,width:.9,pitch:[.88,1.12]},
+  kawara:{g:'yane',name:'瓦',yomi:'かわら',place:'縁側',desc:'焼き物の瓦に当たるコツコツとした乾いた音。雨樋から落ちる水の音が混じる。',
+    rate:1,near:.44,far:.22,farLP:2600,bed:[['highpass',500,.7],['peaking',3000,1,3],['lowpass',7500,.7]],bedG:.45,tone:12000,send:.14,width:.95,pitch:[.88,1.15],drip:'kawaraDrip',dripPan:.45},
+  galva:{g:'yane',name:'ガルバリウム',yomi:'がるばりうむ',place:'室内',desc:'野地板と断熱材の向こうの鋼板屋根。一粒ずつの音はほとんど目立たず、天井越しにサーッと静かにこもって聞こえる。',
+    rate:1.05,near:.26,far:.18,farLP:900,bed:[['highpass',120,.7],['peaking',500,1,2],['lowpass',1100,.7]],bedG:.62,tone:2500,send:.12,width:.9,pitch:[.9,1.1]},
+  soil:{g:'jimen',name:'土',yomi:'つち',place:'軒下',desc:'粒が土に吸いこまれる、ぼそぼそとした柔らかい音。軒先からのしずくも落ちる。',
+    rate:1,near:.62,far:.3,farLP:1500,bed:[['lowpass',1800,.7],['highpass',120,.7]],bedG:.35,tone:14000,send:.08,width:1,pitch:[.85,1.15],drip:'soilDrip',dripPan:-.3},
+  asphalt:{g:'jimen',name:'アスファルト',yomi:'あすふぁると',place:'軒下',desc:'硬い路面で粒がしぶきになって跳ね、サーッと細かく鳴り続ける。',
+    rate:1,near:.45,far:.25,farLP:2500,bed:[['highpass',1300,.7],['peaking',6000,1,5],['lowpass',12000,.7]],bedG:.55,tone:16000,send:.08,width:1,pitch:[.85,1.15]},
+  window:{g:'ie',name:'窓ガラス',yomi:'まどがらす',place:'窓辺',desc:'風に乗った雨がときおりパラパラと窓を打つ。外の雨はガラス越しにこもって聞こえる。',
+    rate:.35,gustExp:3,near:.5,far:.25,farLP:1200,farBank:'asphalt',bed:[['highpass',120,.7],['lowpass',1500,.7]],bedG:.6,tone:6000,send:.1,width:.7,pitch:[.9,1.1]},
+  carport:{g:'ie',name:'カーポート',yomi:'かーぽーと',place:'カーポートの下',desc:'ポリカーボネートの波板。軽く張りのある板が、頭の上でバラバラと鳴る。',
+    rate:1,near:.5,far:.2,farLP:2000,farBank:'asphalt',bed:[['highpass',300,.7],['peaking',1000,1,3],['lowpass',5000,.7]],bedG:.5,tone:12000,send:.08,width:.9,pitch:[.88,1.12]},
+  tent:{g:'shizen',name:'テント',yomi:'てんと',place:'テントの中',desc:'張った布が頭のすぐ上でボツボツと鳴る。まわりの森の雨が遠くに聞こえる。',
+    rate:.9,near:.55,far:.2,farLP:2000,farBank:'leaves',bed:[['highpass',200,.7],['peaking',600,1,2],['lowpass',3000,.7]],bedG:.5,tone:10000,send:.02,width:.8,pitch:[.88,1.12]},
+  leaves:{g:'shizen',name:'木の葉',yomi:'このは',place:'木の下',desc:'葉に当たるサワサワとした柔らかい音。葉にたまった水が、ときどきボタッと落ちる。',
+    rate:1.4,near:.4,far:.25,farLP:2500,bed:[['highpass',400,.7],['peaking',2500,1,2],['lowpass',6000,.7]],bedG:.6,tone:14000,send:.12,width:1,pitch:[.88,1.15],drip:'leafDrip'},
+};
+
+/* ---------- 状態 ---------- */
+const state={surface:'bangasa',mm:12,vol:.7,timerMin:0};
+try{const s=JSON.parse(localStorage.getItem('amaoto:v1')||'{}'); if(SURF[s.surface])state.surface=s.surface; if(s.mm>=MIN_MM&&s.mm<=100)state.mm=s.mm; if(s.vol>=0&&s.vol<=1)state.vol=s.vol;}catch(e){}
+const save=()=>{try{localStorage.setItem('amaoto:v1',JSON.stringify({surface:state.surface,mm:state.mm,vol:state.vol}))}catch(e){}};
+
+/* =========================================================
+   合成：一粒ぶんの音を JS で作る
+   ========================================================= */
+function biq(x,type,f,Q,sr){
+  const w0=TAU*Math.min(f,sr*.45)/sr,cw=Math.cos(w0),al=Math.sin(w0)/(2*Q);
+  let b0,b1,b2;const a0=1+al,a1=-2*cw,a2=1-al;
+  if(type==='lp'){b0=(1-cw)/2;b1=1-cw;b2=b0}
+  else if(type==='hp'){b0=(1+cw)/2;b1=-(1+cw);b2=b0}
+  else{b0=al;b1=0;b2=-al}
+  const B0=b0/a0,B1=b1/a0,B2=b2/a0,A1=a1/a0,A2=a2/a0;
+  const y=new Float32Array(x.length);let x1=0,x2=0,y1=0,y2=0;
+  for(let i=0;i<x.length;i++){const xi=x[i];const yi=B0*xi+B1*x1+B2*x2-A1*y1-A2*y2;y[i]=yi;x2=x1;x1=xi;y2=y1;y1=yi}
+  return y;
+}
+const mk=(sr,d)=>new Float32Array(Math.ceil(sr*d));
+function addNoise(o,sr,{type,f,Q=.8,tau,amp,delay=0,att=.0005}){
+  let n=new Float32Array(o.length);for(let i=0;i<n.length;i++)n[i]=Math.random()*2-1;
+  if(type)n=biq(n,type,f,Q,sr);
+  let s=0;for(let i=0;i<n.length;i++)s+=n[i]*n[i];const k=.4/Math.sqrt(s/n.length+1e-12);
+  for(let i=0;i<o.length;i++){const t=i/sr-delay;if(t<0)continue;const e=(t<att?t/att:1)*Math.exp(-t/tau);if(e<1e-4&&t>att)break;o[i]+=amp*k*n[i]*e}
+}
+function addMode(o,sr,{f,tau,amp,sweep=0,sweepTau=.01,rise=0,delay=0,att=.0004}){
+  let ph=Math.random()*TAU;
+  for(let i=0;i<o.length;i++){const t=i/sr-delay;if(t<0)continue;
+    const fr=f*(1+sweep*Math.exp(-t/sweepTau))*(1+rise*t);ph+=TAU*fr/sr;
+    const e=(t<att?t/att:1)*Math.exp(-t/tau);if(e<1e-4&&t>att)break;o[i]+=amp*Math.sin(ph)*e}
+}
+function finish(o,sr){
+  const f=Math.min(o.length,Math.floor(sr*.004));for(let i=0;i<f;i++)o[o.length-1-i]*=i/f;
+  let p=0;for(let i=0;i<o.length;i++)p=Math.max(p,Math.abs(o[i]));
+  const k=p>0?.9/p:1;for(let i=0;i<o.length;i++)o[i]*=k;return o;
+}
+const GEN={
+  bangasa(sr){const o=mk(sr,.28),f=rnd(150,250);
+    addMode(o,sr,{f,tau:rnd(.04,.07),amp:1,sweep:.5,sweepTau:.008});
+    addMode(o,sr,{f:f*rnd(2.1,2.5),tau:.025,amp:.35});
+    addMode(o,sr,{f:f*rnd(3.4,3.9),tau:.015,amp:.18});
+    addNoise(o,sr,{type:'bp',f:rnd(1200,2000),Q:1,tau:.004,amp:.45});
+    addNoise(o,sr,{type:'bp',f:rnd(500,800),Q:1.5,tau:.03,amp:.22});
+    return finish(o,sr)},
+  // 張ったビニール膜：低めの「ボツ」と、ビニールをはたく中音域の音
+  vinyl(sr){let o=mk(sr,.16),f=rnd(250,420);
+    addMode(o,sr,{f,tau:.025,amp:1,sweep:.3});
+    addMode(o,sr,{f:f*rnd(1.8,2.0),tau:.015,amp:.3});
+    addNoise(o,sr,{type:'bp',f:rnd(900,1600),Q:.9,tau:.006,amp:.6});
+    o=biq(o,'lp',4000,.7,sr);return finish(o,sr)},
+  shinshi(sr){let o=mk(sr,.14);
+    addNoise(o,sr,{type:'bp',f:rnd(700,1300),Q:1.1,tau:.012,amp:1});
+    addMode(o,sr,{f:rnd(320,480),tau:.016,amp:.55,sweep:.3});
+    addNoise(o,sr,{type:'bp',f:2500,Q:1,tau:.003,amp:.2});
+    o=biq(o,'lp',3200,.7,sr);return finish(o,sr)},
+  // 波板：薄い板が太鼓のように鳴る「ボツ」に、中音域の短い金属の響きを少し
+  totan(sr){let o=mk(sr,.3),b=rnd(500,800);
+    addMode(o,sr,{f:rnd(150,280),tau:.03,amp:1,sweep:.2});
+    [1,1.6,2.3,3.1].forEach((r,i)=>addMode(o,sr,{f:b*r*rnd(.98,1.02),tau:rnd(.02,.06),amp:.3/(i+1)}));
+    addNoise(o,sr,{type:'bp',f:1500,Q:.8,tau:.003,amp:.5});
+    o=biq(o,'lp',3500,.7,sr);return finish(o,sr)},
+  // 天井越しの鋼板：こもった柔らかい粒。金属の気配はごくわずか
+  galva(sr){let o=mk(sr,.12);
+    addNoise(o,sr,{type:'lp',f:rnd(900,1400),Q:.7,tau:.006,amp:1});
+    addMode(o,sr,{f:rnd(1500,2100),tau:.008,amp:.12});
+    addMode(o,sr,{f:rnd(120,180),tau:.015,amp:.3});
+    o=biq(o,'lp',1600,.7,sr);return finish(o,sr)},
+  kawara(sr){const o=mk(sr,.09);
+    addNoise(o,sr,{type:'bp',f:rnd(2800,5200),Q:2.2,tau:rnd(.003,.006),amp:1});
+    addMode(o,sr,{f:rnd(1800,2600),tau:.007,amp:.3});
+    addMode(o,sr,{f:rnd(3800,5200),tau:.004,amp:.2});
+    addNoise(o,sr,{type:'bp',f:900,Q:1,tau:.006,amp:.2});
+    return finish(o,sr)},
+  soil(sr){const o=mk(sr,.12);
+    addNoise(o,sr,{type:'lp',f:rnd(400,700),Q:.7,tau:.014,amp:1});
+    addMode(o,sr,{f:rnd(80,140),tau:.02,amp:.5});
+    addNoise(o,sr,{type:'bp',f:1600,Q:1,tau:.003,amp:.12});
+    return finish(o,sr)},
+  asphalt(sr){const o=mk(sr,.12);
+    addNoise(o,sr,{type:'bp',f:rnd(3000,7000),Q:.6,tau:rnd(.008,.014),amp:1});
+    addNoise(o,sr,{type:'bp',f:1000,Q:1,tau:.005,amp:.3});
+    return finish(o,sr)},
+  // 雨樋・軒先のしずく：音程のない「ばしゃ」「ぼと」だけにする
+  kawaraDrip(sr){const o=mk(sr,.2);
+    addNoise(o,sr,{type:'bp',f:rnd(1100,1700),Q:.7,tau:rnd(.015,.025),amp:1});
+    addNoise(o,sr,{type:'lp',f:350,Q:.7,tau:.012,amp:.6});
+    return finish(o,sr)},
+  soilDrip(sr){const o=mk(sr,.2);
+    addNoise(o,sr,{type:'lp',f:500,Q:.7,tau:.02,amp:1});
+    addMode(o,sr,{f:rnd(70,110),tau:.03,amp:.6});
+    return finish(o,sr)},
+  // 窓ガラス：硬いが甲高くしない「パラ」。ガラス板の低い鳴りを添える
+  window(sr){let o=mk(sr,.1);
+    addNoise(o,sr,{type:'bp',f:rnd(1600,2600),Q:1.4,tau:.004,amp:1});
+    addMode(o,sr,{f:rnd(1100,1800),tau:.01,amp:.22});
+    addMode(o,sr,{f:rnd(180,260),tau:.012,amp:.35});
+    o=biq(o,'lp',5000,.7,sr);return finish(o,sr)},
+  // ポリカ波板：軽く中空な「バラ」
+  carport(sr){let o=mk(sr,.12);
+    addNoise(o,sr,{type:'bp',f:rnd(700,1300),Q:1,tau:.008,amp:1});
+    addMode(o,sr,{f:rnd(300,500),tau:.02,amp:.6,sweep:.2});
+    o=biq(o,'lp',4000,.7,sr);return finish(o,sr)},
+  // テントの布：頭上で張った布が鳴る「ボツ」
+  tent(sr){let o=mk(sr,.12);
+    addMode(o,sr,{f:rnd(200,350),tau:.02,amp:1,sweep:.3});
+    addNoise(o,sr,{type:'bp',f:rnd(600,1100),Q:1,tau:.01,amp:.7});
+    o=biq(o,'lp',3000,.7,sr);return finish(o,sr)},
+  // 葉：柔らかくしなる「サワ」
+  leaves(sr){let o=mk(sr,.08);
+    addNoise(o,sr,{type:'bp',f:rnd(1200,2500),Q:.9,tau:.005,amp:1});
+    addMode(o,sr,{f:rnd(400,700),tau:.01,amp:.25});
+    o=biq(o,'lp',5000,.7,sr);return finish(o,sr)},
+  leafDrip(sr){const o=mk(sr,.15);
+    addNoise(o,sr,{type:'lp',f:700,Q:.7,tau:.012,amp:1});
+    addMode(o,sr,{f:rnd(130,180),tau:.02,amp:.5});
+    return finish(o,sr)},
+};
+
+/* =========================================================
+   オーディオエンジン
+   ========================================================= */
+let ctx=null,master,revIn,noiseBuf,voice=null,playing=false,timerId=null;
+let nextNear=0,nextFar=0,nextDrip=0,gust=1,gustT=1,gustClock=0,sleepMul=1;
+const banks={};
+function getBank(name){
+  if(banks[name])return banks[name];
+  const n=name.endsWith('Drip')?6:(name==='asphalt'?15:(name==='totan'||name==='galva'?12:14));
+  const arr=[];for(let i=0;i<n;i++){const d=GEN[name](ctx.sampleRate,i);const b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);arr.push(b)}
+  return banks[name]=arr;
+}
+function pink(n){let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;const a=new Float32Array(n);
+  for(let i=0;i<n;i++){const w=Math.random()*2-1;b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;a[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926}
+  return a}
+function ensureCtx(){
+  if(ctx)return;
+  const AC=window.AudioContext||window.webkitAudioContext;ctx=new AC();
+  const sr=ctx.sampleRate;
+  master=ctx.createGain();master.gain.value=0;
+  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-20;comp.knee.value=18;comp.ratio.value=3.5;comp.attack.value=.01;comp.release.value=.25;
+  const post=ctx.createGain();post.gain.value=1.1;
+  master.connect(comp);comp.connect(post);post.connect(ctx.destination);
+  // 残響
+  const len=Math.floor(sr*1.8),ir=ctx.createBuffer(2,len,sr);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c);let lp=0;
+    for(let i=0;i<len;i++){const t=i/sr;const k=.6-.5*Math.min(1,t/1.5);lp+=(Math.random()*2-1-lp)*k;d[i]=lp*Math.exp(-t/.38)*(t<.01?t/.01:1)}}
+  const conv=ctx.createConvolver();conv.buffer=ir;revIn=ctx.createGain();revIn.connect(conv);conv.connect(master);
+  // 雨の地鳴り（ステレオのピンクノイズ）
+  const nl=sr*6;noiseBuf=ctx.createBuffer(2,nl,sr);noiseBuf.copyToChannel(pink(nl),0);noiseBuf.copyToChannel(pink(nl),1);
+}
+function makeVoice(key){
+  const s=SURF[key],t=ctx.currentTime;
+  const out=ctx.createGain();out.gain.value=0;
+  const tone=ctx.createBiquadFilter();tone.type='lowpass';tone.frequency.value=s.tone;tone.Q.value=.5;
+  const send=ctx.createGain();send.gain.value=s.send;
+  out.connect(tone);tone.connect(master);tone.connect(send);send.connect(revIn);
+  const near=ctx.createGain();near.gain.value=s.near*.5;near.connect(out);
+  const far=ctx.createGain();far.gain.value=s.far*.5;
+  const farLP=ctx.createBiquadFilter();farLP.type='lowpass';farLP.frequency.value=s.farLP;far.connect(farLP);farLP.connect(out);
+  // 地鳴り
+  const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
+  let node=src;
+  for(const [type,f,q,g] of s.bed){const b=ctx.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;if(g)b.gain.value=g;node.connect(b);node=b}
+  const bedGain=ctx.createGain();bedGain.gain.value=0;node.connect(bedGain);bedGain.connect(out);
+  // 遠くの雨
+  const src2=ctx.createBufferSource();src2.buffer=noiseBuf;src2.loop=true;
+  const amLP=ctx.createBiquadFilter();amLP.type='lowpass';amLP.frequency.value=700;
+  const amb=ctx.createGain();amb.gain.value=0;src2.connect(amLP);amLP.connect(amb);amb.connect(out);
+  src.start(t,Math.random()*5);src2.start(t,Math.random()*5);
+  return {key,s,out,near,far,bedGain,amb,srcs:[src,src2],
+    nearBank:getBank(key),farBank:getBank(s.farBank||key),dripBank:s.drip?getBank(s.drip):null};
+}
+function retire(v){
+  const t=ctx.currentTime;v.out.gain.cancelScheduledValues(t);v.out.gain.setValueAtTime(v.out.gain.value,t);v.out.gain.linearRampToValueAtTime(0,t+1.2);
+  setTimeout(()=>{v.srcs.forEach(s=>{try{s.stop()}catch(e){}});v.out.disconnect()},1600);
+}
+function switchVoice(key){
+  if(!ctx)return;
+  const old=voice;voice=makeVoice(key);
+  const t=ctx.currentTime;voice.out.gain.setValueAtTime(0,t);voice.out.gain.linearRampToValueAtTime(1,t+(old?1.2:.05));
+  if(old)retire(old);
+  nextDrip=0;
+}
+function drop(v,bank,bus,t,m,width,pan){
+  const src=ctx.createBufferSource();src.buffer=bank[(Math.random()*bank.length)|0];
+  const sz=Math.pow(Math.random(),2.2),heavy=Math.min(1,m/80);
+  src.playbackRate.value=rnd(v.s.pitch[0],v.s.pitch[1])*(1-.1*heavy*sz);
+  const g=ctx.createGain();g.gain.value=(.16+.84*sz)*(.7+.3*Math.sqrt(heavy));
+  src.connect(g);
+  if(ctx.createStereoPanner){const p=ctx.createStereoPanner();p.pan.value=pan!=null?pan+rnd(-.05,.05):(Math.random()*2-1)*width;g.connect(p);p.connect(bus)}
+  else g.connect(bus);
+  src.start(t);
+}
+function tick(){
+  if(!ctx||!voice)return;
+  const now=ctx.currentTime,horizon=now+(document.hidden?1.5:.15),m=state.mm,v=voice,s=v.s;
+  if(now>gustClock){gustT=1+(Math.random()*2-1)*(.12+.18*Math.min(1,m/50));gustClock=now+rnd(1.2,3.5)}
+  gust+=(gustT-gust)*.04;
+  const base=2+4*Math.pow(m,.8);
+  const rN=Math.min(260,s.rate*base*Math.pow(gust,s.gustExp||1)),rF=Math.min(260,rN*1.4);
+  v.near.gain.setTargetAtTime(s.near/Math.pow(1+rN/15,.35),now,.3);
+  v.far.gain.setTargetAtTime(s.far/Math.pow(1+rF/15,.35),now,.3);
+  v.bedGain.gain.setTargetAtTime(s.bedG*(.03+.75*Math.pow(m/100,.6))*gust,now,.4);
+  v.amb.gain.setTargetAtTime(.22*Math.pow(m/100,.5),now,.5);
+  if(nextNear<now-.05)nextNear=now+Math.random()*.02;
+  if(nextFar<now-.05)nextFar=now+Math.random()*.02;
+  while(nextNear<horizon){if(nextNear>=now)drop(v,v.nearBank,v.near,nextNear,m,s.width);nextNear+=-Math.log(1-Math.random())/rN}
+  while(nextFar<horizon){if(nextFar>=now)drop(v,v.farBank,v.far,nextFar,m,1);nextFar+=-Math.log(1-Math.random())/rF}
+  if(v.dripBank){
+    const rD=Math.min(5,.35+m*.05);
+    if(nextDrip<now-.05)nextDrip=now+.1;
+    while(nextDrip<horizon){if(nextDrip>=now)drop(v,v.dripBank,v.near,nextDrip,m,s.width,s.dripPan);nextDrip+=(1/rD)*rnd(.6,1.4)}
+  }
+}
+function applyVol(tc=.1){
+  if(!ctx)return;const t=ctx.currentTime;
+  master.gain.cancelScheduledValues(t);
+  master.gain.setTargetAtTime(playing?state.vol*state.vol*sleepMul:0,t,tc);
+}
+let timerEnd=null;
+async function play(){
+  ensureCtx();
+  try{await ctx.resume()}catch(e){}
+  if(!voice||voice.key!==state.surface)switchVoice(state.surface);
+  playing=true;sleepMul=1;applyVol(.5);
+  if(!timerId)timerId=setInterval(tick,25);
+  tick();
+  if(state.timerMin)timerEnd=Date.now()+state.timerMin*60000;
+  renderPlay();
+}
+function stop(){
+  playing=false;applyVol(.25);timerEnd=null;
+  setTimeout(()=>{if(!playing&&ctx){clearInterval(timerId);timerId=null;ctx.suspend()}},1400);
+  renderPlay();renderRemain();
+}
+
+/* =========================================================
+   UI
+   ========================================================= */
+const playBtn=$('#play'),playText=$('#playText'),playIcon=$('#playIcon');
+function renderPlay(){
+  playBtn.setAttribute('aria-pressed',playing);
+  playText.textContent=playing?'止める':'聴く';
+  playIcon.setAttribute('d',playing?'M7 7h10v10H7z':'M8 5.5v13l10.5-6.5z');
+}
+playBtn.addEventListener('click',()=>playing?stop():play());
+document.addEventListener('keydown',e=>{
+  if(e.code!=='Space')return;const tg=e.target.tagName;
+  if(tg==='BUTTON'||tg==='INPUT')return;e.preventDefault();playing?stop():play();
+});
+
+const vol=$('#vol');vol.value=Math.round(state.vol*100);
+vol.addEventListener('input',()=>{state.vol=vol.value/100;applyVol(.05);save()});
+
+// 強さ
+const rain=$('#rain'),strip=$('#strip');
+strip.style.background='linear-gradient(90deg,'+RADAR.map(([a,b,c])=>`${c} ${(posOf(a)*100).toFixed(2)}% ${(posOf(b)*100).toFixed(2)}%`).join(',')+')';
+$('#ticks').innerHTML=[1,5,10,20,30,50,80].map(m=>`<span style="left:${(posOf(m)*100).toFixed(2)}%">${m}</span>`).join('');
+rain.value=vFromMm(state.mm);
+const fmtMm=m=>m<10?m.toFixed(1):String(Math.round(m));
+function renderRain(){
+  const m=state.mm,r=RAIN.find(r=>m<r.max),c=RADAR.find(([a,b])=>m<b)||RADAR[RADAR.length-1];
+  $('#mmNum').textContent=fmtMm(m);$('#termText').textContent=r.term;$('#feel').textContent=r.feel;
+  $('#dot').style.setProperty('--dot',c[2]);
+  rain.setAttribute('aria-valuetext',`${fmtMm(m)} mm/h、${r.term}`);
+  renderNow();
+}
+rain.addEventListener('input',()=>{state.mm=mmFromV(+rain.value);renderRain();save()});
+
+// 場所
+const groupsEl=$('#groups');
+groupsEl.innerHTML=GROUPS.map(([g,label])=>{
+  const keys=Object.keys(SURF).filter(k=>SURF[k].g===g);
+  return `<div class="group"><h3>${label}</h3><div class="opts">`+
+    keys.map(k=>`<button class="opt" data-k="${k}" aria-pressed="false"><span class="n">${SURF[k].name}</span><span class="y">${SURF[k].yomi}</span></button>`).join('')+
+    `</div></div>`}).join('');
+groupsEl.addEventListener('click',e=>{
+  const b=e.target.closest('.opt');if(!b)return;
+  const k=b.dataset.k;if(k===state.surface)return;
+  state.surface=k;save();renderSurface();
+  if(playing)switchVoice(k);
+});
+function renderSurface(){
+  groupsEl.querySelectorAll('.opt').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===state.surface));
+  const s=SURF[state.surface];$('#place').textContent=s.place;$('#desc').textContent=s.desc;
+  renderNow();layout();seedStatic();
+}
+function renderNow(){
+  const s=SURF[state.surface];
+  $('#now').innerHTML=`${s.place}で ・ <b>${s.name}</b> ・ ${fmtMm(state.mm)} mm/h`;
+}
+
+// タイマー
+const seg=$('#seg');
+seg.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  state.timerMin=+b.dataset.min;
+  seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  sleepMul=1;
+  timerEnd=(playing&&state.timerMin)?Date.now()+state.timerMin*60000:null;
+  applyVol(.3);renderRemain();
+});
+function renderRemain(){
+  const el=$('#remain');
+  if(!state.timerMin){el.textContent='';return}
+  if(!timerEnd){el.textContent=`再生を始めてから ${state.timerMin} 分で静かに止まります`;return}
+  const r=Math.max(0,timerEnd-Date.now()),mm=Math.floor(r/60000),ss=Math.floor(r/1000)%60;
+  el.textContent=`残り ${mm}:${String(ss).padStart(2,'0')}　最後の1分でゆっくり小さくなります`;
+}
+setInterval(()=>{
+  if(!timerEnd||!playing)return;
+  const r=timerEnd-Date.now();
+  if(r<=0){stop();return}
+  if(r<60000){sleepMul=r/60000;applyVol(.3)}
+  renderRemain();
+},250);
+
+/* =========================================================
+   情景（canvas）
+   ========================================================= */
+const scene=$('#scene'),cv=$('#cv'),c=cv.getContext('2d');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W=0,H=0,G={};
+const near=[],far=[],parts=[];
+let vGust=0,vGustT=0,vGustClock=0,dripAcc=0;
+
+function resize(){
+  const r=scene.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1);
+  W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);c.setTransform(dpr,0,0,dpr,0,0);
+  layout();seedStatic();
+}
+function layout(){
+  const k=state.surface,g=SURF[k].g;G={k,g,mode:'hit'};
+  if(!['kasa','yane','jimen'].includes(g))return layoutExtra(k);
+  if(g==='kasa'){
+    G.cx=W*.58;G.R=Math.min(W*.33,H*.42,280);G.y0=H*.3;G.Hc=G.R*(k==='bangasa'?.36:.48);G.e=G.R*.13;G.ground=H*.93;
+  }else if(g==='yane'){
+    G.base=H*.52;G.P=46;G.xEnd=k==='kawara'?W*.74:W+10;G.ground=H*.9;G.floor=H*.84;
+  }else{
+    G.top=H*.58;G.eave=Math.max(26,H*.07);
+    G.puddles=[];G.pebbles=[];G.drips=[];
+    for(let i=0;i<6;i++){const d=rnd(.15,1);G.puddles.push({x:rnd(.05,.95)*W,y:G.top+(H-G.top)*d,rx:rnd(30,90)*(.4+.6*d),d})}
+    G.puddles.forEach(p=>p.ry=p.rx*.22);
+    for(let i=0;i<90;i++){const d=Math.random();G.pebbles.push({x:Math.random()*W,y:G.top+(H-G.top)*d,r:(.6+Math.random()*1.6)*(.4+.6*d)})}
+    for(let x=18;x<W;x+=rnd(40,90))G.drips.push(x);
+  }
+}
+function hitY(s){ // 手前の雨粒が止まる高さ
+  const x=s.x;
+  if(G.k==='carport')return x>=G.rx0?G.roofY+3*Math.sin(x/15*TAU):G.ground;
+  if(G.k==='leaves'){const i=(x/2)|0;return i>=0&&i<G.hm.length?G.hm[i]:G.ground}
+  if(G.g==='kasa'){const u=(x-G.cx)/G.R;return Math.abs(u)<=1?G.y0+G.Hc*u*u:G.ground}
+  if(G.g==='yane'){
+    if(G.k==='totan')return G.base+4*Math.sin(x/22*TAU);
+    if(G.k==='galva')return G.base+(x/W)*H*.03-7;
+    return x<G.xEnd?G.base-11*Math.abs(Math.sin(Math.PI*x/G.P)):G.ground;
+  }
+  return s.land;
+}
+function heavy(){return Math.min(1,state.mm/80)}
+function target(){
+  const area=Math.max(.5,Math.min(1.6,(W*H)/(800*500)));
+  const n=Math.round((12+5.5*Math.pow(state.mm,.85))*area);
+  return {n:Math.min(700,n),f:Math.min(900,Math.round(n*1.3))};
+}
+function spawn(s,top){
+  const d=G.g==='jimen'?Math.random():1;
+  s.d=d;s.land=G.g==='jimen'?G.top+(H-G.top)*(.03+.97*d):0;
+  const sc=G.g==='jimen'?.45+.55*d:1;
+  s.spd=rnd(900,1300)*Math.max(.6,H/520)*sc;s.len=rnd(14,30)*(.6+.4*heavy())*sc;s.a=rnd(.3,.55)*(.5+.5*sc);
+  s.x=Math.random()*(W+H*.2)-H*.1;s.y=top?Math.random()*H:-s.len-Math.random()*H*.25;
+}
+function spawnFar(s,top){s.spd=rnd(550,800)*Math.max(.6,H/520);s.len=rnd(8,14);s.a=rnd(.1,.2);s.x=Math.random()*(W+H*.2)-H*.1;s.y=top?Math.random()*H:-s.len-Math.random()*H*.25}
+function fit(){
+  const t=target();
+  while(near.length<t.n){const s={};spawn(s,true);near.push(s)}
+  if(near.length>t.n)near.length=t.n;
+  while(far.length<t.f){const s={};spawnFar(s,true);far.push(s)}
+  if(far.length>t.f)far.length=t.f;
+}
+function seedStatic(){
+  near.length=0;far.length=0;parts.length=0;fit();
+  if(G.mode==='glass'){G.drops=[];const n=Math.min(G.cap,Math.round(30+state.mm*2.5));for(let i=0;i<n;i++)addDrop(true)}
+  if(reduce)draw(0);
+}
+function splash(x,y,s){
+  if(parts.length>700)return;
+  const k=G.k;
+  if(G.g==='jimen'){
+    const sc=.4+.6*s.d;
+    if(k==='asphalt'){
+      const p=G.puddles.find(p=>((x-p.x)/p.rx)**2+((y-p.y)/p.ry)**2<1);
+      if(p){parts.push({t:0,life:.45,type:'ring',x,y,r:10*sc});return}
+    }else{parts.push({t:0,life:.35,type:'dot',x,y,r:2.2*sc})}
+    for(let i=0;i<(k==='asphalt'?2:1);i++)parts.push({t:0,life:.3,type:'spark',x,y,vx:rnd(-50,50)*sc,vy:-rnd(60,140)*sc});
+    return;
+  }
+  const hard=k==='totan'||k==='kawara'||k==='galva'||k==='vinyl'||k==='carport';
+  const n=hard?2:1;
+  for(let i=0;i<n;i++)parts.push({t:0,life:.28,type:'spark',x,y:y-1,vx:rnd(-70,70),vy:-rnd(hard?90:40,hard?190:90)});
+  if(k==='totan'&&Math.random()<.25)parts.push({t:0,life:.12,type:'flash',x,y});
+}
+
+function drawSurface(){
+  const k=G.k;
+  if(G.g==='kasa')return drawUmbrella();
+  if(G.g==='yane')return drawRoof();
+  if(G.k==='carport')return drawCarport();
+  if(G.k==='leaves')return drawLeaves();
+  drawGround();
+}
+function drawUmbrella(){
+  const {cx,R,y0,Hc,e,ground}=G,k=G.k,rimY=y0+Hc;
+  // 地面
+  c.strokeStyle='rgba(140,155,161,.25)';c.lineWidth=1;c.beginPath();c.moveTo(0,ground);c.lineTo(W,ground);c.stroke();
+  const n=k==='bangasa'?40:8,tips=[];
+  for(let i=0;i<n;i++){const th=i/n*TAU;tips.push({x:cx+R*Math.cos(th),y:rimY+e*Math.sin(th),front:Math.sin(th)>1e-6})}
+  const front=tips.filter(t=>t.front).sort((a,b)=>b.x-a.x);
+  const col={bangasa:['rgba(216,180,106,.26)','rgba(216,180,106,.85)','rgba(216,180,106,.38)'],
+             vinyl:['rgba(214,226,230,.07)','rgba(214,226,230,.6)','rgba(214,226,230,.28)'],
+             shinshi:['#0B1013','rgba(140,155,161,.85)','rgba(140,155,161,.35)']}[k];
+  // 柄
+  const shaftEnd=Math.min(H*.88,rimY+R*.95);
+  c.strokeStyle=k==='bangasa'?'rgba(216,180,106,.8)':'rgba(180,192,196,.75)';
+  c.lineWidth=k==='bangasa'?4:2.5;c.lineCap='round';
+  c.beginPath();c.moveTo(cx,y0);c.lineTo(cx,shaftEnd);
+  if(k!=='bangasa')c.arc(cx-9,shaftEnd,9,0,Math.PI,false);
+  c.stroke();c.lineCap='butt';
+  // 受け骨（番傘）
+  if(k==='bangasa'){
+    const hub=rimY+R*.3;c.strokeStyle='rgba(216,180,106,.28)';c.lineWidth=1;c.beginPath();
+    for(const t of front){c.moveTo(cx,hub);c.lineTo(t.x,t.y)}c.stroke();
+    c.fillStyle='rgba(216,180,106,.6)';c.fillRect(cx-4,hub-5,8,10);
+  }
+  // 傘布
+  c.beginPath();c.moveTo(cx-R,rimY);c.quadraticCurveTo(cx,y0-Hc,cx+R,rimY);
+  if(k==='bangasa'){c.ellipse(cx,rimY,R,e,0,0,Math.PI,false)}
+  else{let prev={x:cx+R,y:rimY};for(const t of [...front,{x:cx-R,y:rimY}]){c.quadraticCurveTo((prev.x+t.x)/2,(prev.y+t.y)/2-R*.07,t.x,t.y);prev=t}}
+  c.closePath();c.fillStyle=col[0];c.fill();c.strokeStyle=col[1];c.lineWidth=1.3;c.stroke();
+  // 親骨
+  c.strokeStyle=col[2];c.lineWidth=k==='bangasa'?.8:1;c.beginPath();
+  for(const t of [...front,{x:cx+R,y:rimY},{x:cx-R,y:rimY}]){const dx=t.x-cx;c.moveTo(cx,y0);c.quadraticCurveTo(cx+dx*.55,y0+(t.y-y0)*.15,t.x,t.y)}
+  c.stroke();
+  if(k==='bangasa'){ // 頭の和紙
+    c.beginPath();c.moveTo(cx-R*.18,y0+Hc*.035*4*.18);c.quadraticCurveTo(cx,y0-Hc*.08,cx+R*.18,y0+Hc*.035*4*.18);
+    c.strokeStyle='rgba(216,180,106,.7)';c.lineWidth=2;c.stroke();
+  }
+  c.strokeStyle=col[1];c.lineWidth=1.5;c.beginPath();c.moveTo(cx,y0);c.lineTo(cx,y0-10);c.stroke();
+  G.tips=[...front.map(t=>({x:t.x,y:t.y})),{x:cx+R,y:rimY},{x:cx-R,y:rimY}];
+}
+function interior(y){
+  const gr=c.createLinearGradient(0,y,0,H);gr.addColorStop(0,'#0F1417');gr.addColorStop(1,'#0B0F11');
+  return gr;
+}
+function bulb(x,top){
+  const y=top+(H-top)*.42;
+  c.strokeStyle='rgba(140,155,161,.45)';c.lineWidth=1;c.beginPath();c.moveTo(x,top);c.lineTo(x,y-5);c.stroke();
+  const gl=c.createRadialGradient(x,y,0,x,y,Math.min(140,H*.35));gl.addColorStop(0,'rgba(216,180,106,.28)');gl.addColorStop(1,'rgba(216,180,106,0)');
+  c.fillStyle=gl;c.fillRect(x-160,y-160,320,320);
+  c.fillStyle='#E8C987';c.beginPath();c.arc(x,y,4.5,0,TAU);c.fill();
+}
+function drawRoof(){
+  const k=G.k,b=G.base;
+  if(k==='totan'){
+    c.beginPath();c.moveTo(0,b);for(let x=0;x<=W;x+=2)c.lineTo(x,b+4*Math.sin(x/22*TAU));
+    c.lineTo(W,H);c.lineTo(0,H);c.closePath();c.fillStyle=interior(b);c.fill();
+    c.beginPath();for(let x=0;x<=W;x+=2){const y=b+4*Math.sin(x/22*TAU);x?c.lineTo(x,y):c.moveTo(x,y)}
+    c.strokeStyle='rgba(190,202,206,.8)';c.lineWidth=1.4;c.stroke();
+    c.beginPath();for(let x=0;x<=W;x+=2){const y=b+7+4*Math.sin(x/22*TAU);x?c.lineTo(x,y):c.moveTo(x,y)}
+    c.strokeStyle='rgba(190,202,206,.25)';c.lineWidth=1;c.stroke();
+    c.fillStyle='rgba(120,100,80,.35)';for(let x=40;x<W;x+=150)c.fillRect(x,b+9,12,16);
+    bulb(W*.62,b+10);
+  }else if(k==='galva'){
+    const y=x=>b+(x/W)*H*.03;
+    c.beginPath();c.moveTo(0,y(0));c.lineTo(W,y(W));c.lineTo(W,H);c.lineTo(0,H);c.closePath();c.fillStyle=interior(b);c.fill();
+    c.strokeStyle='rgba(190,202,206,.8)';c.lineWidth=1.4;c.beginPath();c.moveTo(0,y(0));c.lineTo(W,y(W));c.stroke();
+    c.fillStyle='rgba(190,202,206,.75)';for(let x=20;x<W;x+=56)c.fillRect(x,y(x)-8,2,8);
+    c.strokeStyle='rgba(216,180,106,.18)';c.lineWidth=1;c.beginPath();
+    for(let x=0;x<W;x+=8){c.moveTo(x,y(x)+12);c.lineTo(x+6,y(x)+3)}c.stroke();
+    c.strokeStyle='rgba(190,202,206,.25)';c.beginPath();c.moveTo(0,y(0)+13);c.lineTo(W,y(W)+13);c.stroke();
+    bulb(W*.6,y(W*.6)+13);
+  }else{
+    const xe=G.xEnd,P=G.P;
+    // 軒の内側と縁側
+    c.fillStyle=interior(b);c.fillRect(0,b,xe,H-b);
+    c.strokeStyle='rgba(216,180,106,.35)';c.lineWidth=1;c.beginPath();c.moveTo(0,G.floor);c.lineTo(xe-4,G.floor);c.stroke();
+    c.strokeStyle='rgba(216,180,106,.15)';c.beginPath();for(let x=0;x<xe-4;x+=64){c.moveTo(x,G.floor);c.lineTo(x,G.floor+(H-G.floor))}c.stroke();
+    c.fillStyle='rgba(120,100,80,.5)';c.fillRect(xe-22,b+8,8,G.floor-b-8);
+    // 瓦
+    c.beginPath();c.moveTo(0,b);for(let x=0;x<=xe;x+=2)c.lineTo(x,b-11*Math.abs(Math.sin(Math.PI*x/P)));
+    c.strokeStyle='rgba(160,172,178,.9)';c.lineWidth=1.4;c.stroke();
+    c.beginPath();for(let x=0;x<=xe;x+=P){c.moveTo(x,b);c.lineTo(x,b+6)}c.strokeStyle='rgba(160,172,178,.35)';c.stroke();
+    c.fillStyle='#1A2024';c.fillRect(0,b,xe,6);
+    // 雨樋
+    c.strokeStyle='rgba(160,172,178,.8)';c.beginPath();c.arc(xe+2,b+2,7,0,Math.PI,false);c.stroke();
+    // 庭
+    c.strokeStyle='rgba(140,155,161,.3)';c.beginPath();c.moveTo(xe,G.ground);c.lineTo(W,G.ground);c.stroke();
+    c.fillStyle='#2A3237';c.beginPath();c.ellipse(xe+2,G.ground-4,22,8,0,0,TAU);c.fill();
+    c.fillStyle='rgba(170,190,200,.12)';c.beginPath();c.ellipse(xe+2,G.ground-7,14,3.5,0,0,TAU);c.fill();
+  }
+}
+function drawGround(){
+  const k=G.k,t=G.top;
+  const gr=c.createLinearGradient(0,t,0,H);
+  if(k==='soil'){gr.addColorStop(0,'#28262200');gr.addColorStop(.02,'#282622');gr.addColorStop(1,'#1A1815')}
+  else{gr.addColorStop(0,'#252B2F00');gr.addColorStop(.02,'#252B2F');gr.addColorStop(1,'#14181B')}
+  c.fillStyle=gr;c.fillRect(0,t,W,H-t);
+  c.strokeStyle='rgba(140,155,161,.25)';c.lineWidth=1;c.beginPath();c.moveTo(0,t);c.lineTo(W,t);c.stroke();
+  if(k==='soil'){c.fillStyle='rgba(150,138,118,.2)';for(const p of G.pebbles){c.beginPath();c.ellipse(p.x,p.y,p.r*1.4,p.r*.7,0,0,TAU);c.fill()}}
+  else{for(const p of G.puddles){c.beginPath();c.ellipse(p.x,p.y,p.rx,p.ry,0,0,TAU);c.fillStyle='rgba(170,190,200,.06)';c.fill();c.strokeStyle='rgba(170,190,200,.12)';c.stroke()}
+    c.strokeStyle='rgba(220,226,226,.12)';c.lineWidth=2;c.setLineDash([26,22]);c.beginPath();c.moveTo(0,t+(H-t)*.55);c.lineTo(W,t+(H-t)*.55);c.stroke();c.setLineDash([])}
+  // 軒
+  c.fillStyle='#0C1012';c.fillRect(0,0,W,G.eave);
+  c.strokeStyle='rgba(140,155,161,.4)';c.beginPath();c.moveTo(0,G.eave);c.lineTo(W,G.eave);c.stroke();
+}
+function streaks(arr,w,col,lw){
+  c.strokeStyle=col;c.lineWidth=lw;c.beginPath();
+  for(const s of arr){c.moveTo(s.x,s.y);c.lineTo(s.x-s.len*w,s.y-s.len)}
+  c.stroke();
+}
+function drawParts(dt){
+  c.fillStyle='rgba(200,214,220,.7)';
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.t+=dt;if(p.t>=p.life){parts.splice(i,1);continue}
+    const a=1-p.t/p.life;
+    if(p.type==='spark'){p.vy+=900*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;c.globalAlpha=a*.8;c.fillRect(p.x,p.y,1.4,1.4)}
+    else if(p.type==='ring'){c.globalAlpha=a*.6;c.strokeStyle='rgba(200,214,220,.8)';c.lineWidth=1;c.beginPath();const r=p.r*(.2+p.t/p.life);c.ellipse(p.x,p.y,r,r*.28,0,0,TAU);c.stroke()}
+    else if(p.type==='dot'){c.globalAlpha=a*.5;c.fillStyle='rgba(10,8,6,.9)';c.beginPath();c.ellipse(p.x,p.y,p.r*1.6,p.r*.6,0,0,TAU);c.fill();c.fillStyle='rgba(200,214,220,.7)'}
+    else if(p.type==='drip'){p.vy+=1200*dt;p.y+=p.vy*dt;c.globalAlpha=.8;c.fillRect(p.x-.8,p.y-5,1.6,6);
+      if(p.y>=p.to){parts.splice(i,1);parts.push({t:0,life:.5,type:'ring',x:p.x,y:p.to,r:G.g==='jimen'?12:14})}}
+    else if(p.type==='dimple'){const r=p.r*(1+.6*p.t/p.life);c.globalAlpha=a;c.fillStyle='rgba(15,12,8,.35)';c.beginPath();c.arc(p.x,p.y,r,0,TAU);c.fill();
+      c.strokeStyle='rgba(240,220,180,.14)';c.lineWidth=1;c.beginPath();c.arc(p.x,p.y,r+1.5,0,TAU);c.stroke();c.fillStyle='rgba(200,214,220,.7)'}
+    else if(p.type==='flash'){c.globalAlpha=a*.5;c.fillStyle='rgba(230,236,240,.9)';c.beginPath();c.arc(p.x,p.y,2.5,0,TAU);c.fill();c.fillStyle='rgba(200,214,220,.7)'}
+  }
+  c.globalAlpha=1;
+}
+function drips(dt){
+  const rate=.3+state.mm*.06;dripAcc+=rate*dt;
+  while(dripAcc>1){dripAcc-=1;
+    if(G.tips){const t=G.tips[(Math.random()*G.tips.length)|0];parts.push({type:'drip',t:0,life:9,x:t.x,y:t.y+2,vy:20,to:G.dripTo||G.ground})}
+    else if(G.k==='kawara'){parts.push({type:'drip',t:0,life:9,x:G.xEnd+2,y:G.base+8,vy:30,to:G.ground-7})}
+    else if(G.g==='jimen'){const x=G.drips[(Math.random()*G.drips.length)|0];parts.push({type:'drip',t:0,life:9,x,y:G.eave,vy:20,to:G.top+(H-G.top)*rnd(.05,.25)})}
+  }
+}
+
+/* ---------- 追加した場所の情景 ---------- */
+function layoutExtra(k){
+  if(k==='carport'){
+    G.roofY=H*.26;G.rx0=W*.12;G.ground=H*.93;G.tips=[{x:G.rx0,y:G.roofY+4}];
+  }else if(k==='leaves'){
+    G.ground=H*.94;G.trunk={x0:W*.3,x1:W*.34,y1:H*.4};
+    const n=Math.max(4,Math.round(W/150)),sc=Math.max(.7,Math.min(1.2,W/800));
+    G.branches=[];for(let i=0;i<n;i++)G.branches.push({x:W*(.08+.86*(i+.5)/n)+rnd(-20,20),y:H*rnd(.14,.48)});
+    G.leaves=[];
+    G.branches.forEach(b=>{for(let j=0;j<26;j++){const rx=rnd(13,22)*sc;G.leaves.push({x:b.x+rnd(-85,85)*sc,y:b.y+rnd(-45,45)*sc,rx,ry:rx*.42,rot:rnd(-.7,.7),shade:Math.random()})}});
+    G.leaves.sort((a,b)=>a.y-b.y);
+    const hm=new Float32Array(Math.ceil(W/2)+2).fill(G.ground);
+    for(const l of G.leaves){const co=Math.cos(l.rot),si=Math.sin(l.rot);
+      const hw=Math.sqrt((l.rx*co)**2+(l.ry*si)**2),hh=Math.sqrt((l.rx*si)**2+(l.ry*co)**2);
+      for(let x=Math.max(0,l.x-hw*.8);x<=Math.min(W,l.x+hw*.8);x+=2){const i=(x/2)|0,u=(x-l.x)/hw,yt=l.y-hh*Math.sqrt(Math.max(0,1-u*u));if(yt<hm[i])hm[i]=yt}}
+    G.hm=hm;G.tips=G.leaves.filter((_,i)=>i%3===0).map(l=>({x:l.x,y:l.y+l.ry}));
+  }else if(k==='window'){
+    G.mode='glass';G.cap=260;G.dAcc=0;
+    const x0=W*.2,x1=W*.92,y0=H*.1,y1=H*.78;G.win={x0,x1,y0,y1};
+    G.poly=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+    G.bld=[];for(let x=x0-20;x<x1;){const bw=rnd(40,110),bh=(y1-y0)*rnd(.12,.34);
+      G.bld.push({x,w:bw,h:bh,lights:Array.from({length:(Math.random()*3)|0},()=>({u:rnd(.15,.8),v:rnd(.2,.7)}))});x+=bw+rnd(2,14)}
+  }else if(k==='tent'){
+    G.mode='inside';G.A={x:W*.56,y:H*.06};G.Lb={x:W*.04,y:H};G.Rb={x:W*.98,y:H};G.dAcc=0;
+  }
+}
+function pathPoly(pts){c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath()}
+function inPoly(x,y,pts){let sgn=0;for(let i=0;i<pts.length;i++){const [ax,ay]=pts[i],[bx,by]=pts[(i+1)%pts.length];const cr=(bx-ax)*(y-ay)-(by-ay)*(x-ax);if(cr!==0){const sg=cr>0?1:-1;if(sgn&&sg!==sgn)return false;sgn=sg}}return true}
+function addDrop(init){
+  const xs=G.poly.map(p=>p[0]),ys=G.poly.map(p=>p[1]);
+  for(let t=0;t<8;t++){const x=rnd(Math.min(...xs),Math.max(...xs)),y=rnd(Math.min(...ys),Math.max(...ys));
+    if(!inPoly(x,y,G.poly))continue;const r=rnd(1,3)*(.8+.5*heavy());
+    G.drops.push({x,y,r,slide:r>2.4&&Math.random()<.5?rnd(15,50):0});
+    if(G.drops.length>G.cap)G.drops.shift();return}
+}
+function drawGlass(dt,w){
+  const k=G.k,poly=G.poly;
+  c.fillStyle='#0B0F12';c.fillRect(0,0,W,H);
+  c.save();pathPoly(poly);c.clip();
+  const ys=poly.map(p=>p[1]),gy0=Math.min(...ys),gy1=Math.max(...ys);
+  const gr=c.createLinearGradient(0,gy0,0,gy1);gr.addColorStop(0,'#2A353C');gr.addColorStop(1,'#1B2429');c.fillStyle=gr;c.fillRect(0,0,W,H);
+  {
+    const {y1}=G.win;c.fillStyle='#141B1F';
+    for(const b of G.bld){c.fillRect(b.x,y1-b.h,b.w,b.h);for(const l of b.lights){c.fillStyle='rgba(216,180,106,.45)';c.fillRect(b.x+b.w*l.u,y1-b.h+b.h*l.v,4,5);c.fillStyle='#141B1F'}}
+  }
+  if(!reduce){
+    for(const s of far){s.y+=s.spd*dt;s.x+=s.spd*dt*w;if(s.y-s.len>H)spawnFar(s,false)}
+    for(const s of near){s.y+=s.spd*dt;s.x+=s.spd*dt*w;if(s.y-s.len>H)spawn(s,false)}
+  }
+  streaks(far,w,'rgba(190,205,212,.14)',.8);streaks(near,w,'rgba(205,218,224,.26)',1);
+  // ガラスの水滴
+  if(!reduce){
+    const base=2+4*Math.pow(state.mm,.8),gk=Math.pow(1+Math.max(0,vGust),2);
+    G.dAcc+=Math.min(70,SURF[k].rate*base*gk*.7)*dt;
+    while(G.dAcc>1){G.dAcc--;addDrop()}
+    G.drops=G.drops.filter(d=>{if(d.slide)d.y+=d.slide*dt;return inPoly(d.x,d.y,poly)});
+  }
+  for(const d of G.drops){c.fillStyle='rgba(190,205,212,.2)';c.beginPath();c.arc(d.x,d.y,d.r,0,TAU);c.fill();
+    c.fillStyle='rgba(255,255,255,.32)';c.beginPath();c.arc(d.x-d.r*.3,d.y-d.r*.3,d.r*.35,0,TAU);c.fill()}
+  c.restore();
+  if(k==='window'){
+    const {x0,x1,y0,y1}=G.win,xm=(x0+x1)/2;
+    c.strokeStyle='#2A3338';c.lineWidth=8;c.strokeRect(x0,y0,x1-x0,y1-y0);
+    c.fillStyle='#2A3338';c.fillRect(xm-4,y0,8,y1-y0);
+    c.strokeStyle='rgba(190,202,206,.25)';c.lineWidth=1;c.strokeRect(x0-4,y0-4,x1-x0+8,y1-y0+8);
+    c.fillStyle='#232B30';c.fillRect(x0-14,y1+4,x1-x0+28,8);
+  }
+}
+function drawTent(dt){
+  const {A,Lb,Rb}=G;
+  c.fillStyle='#0C1013';c.fillRect(0,0,W,H);
+  const ly=H*.42,gl=c.createRadialGradient(A.x,ly,0,A.x,ly,Math.max(W,H)*.7);
+  gl.addColorStop(0,'rgba(216,180,106,.34)');gl.addColorStop(.5,'rgba(216,180,106,.12)');gl.addColorStop(1,'rgba(216,180,106,.03)');
+  c.beginPath();c.moveTo(A.x,A.y);c.lineTo(Rb.x,Rb.y);c.lineTo(Lb.x,Lb.y);c.closePath();c.fillStyle='#161B1C';c.fill();c.fillStyle=gl;c.fill();
+  c.strokeStyle='rgba(216,180,106,.16)';c.lineWidth=1;c.beginPath();
+  for(const f of [.2,.4,.6,.8]){c.moveTo(A.x,A.y);c.lineTo(Lb.x+(Rb.x-Lb.x)*f,H)}c.stroke();
+  c.strokeStyle='rgba(216,180,106,.5)';c.lineWidth=1.4;c.beginPath();c.moveTo(A.x,A.y);c.lineTo(Rb.x,Rb.y);c.moveTo(A.x,A.y);c.lineTo(Lb.x,Lb.y);c.stroke();
+  c.setLineDash([3,4]);c.strokeStyle='rgba(216,180,106,.35)';c.beginPath();c.moveTo(A.x,A.y+H*.12);c.lineTo(A.x-W*.02,H);c.stroke();c.setLineDash([]);
+  // ランタン
+  c.strokeStyle='rgba(140,155,161,.5)';c.beginPath();c.moveTo(A.x,A.y);c.lineTo(A.x,ly-10);c.stroke();
+  const lg=c.createRadialGradient(A.x,ly,0,A.x,ly,60);lg.addColorStop(0,'rgba(240,210,150,.5)');lg.addColorStop(1,'rgba(240,210,150,0)');c.fillStyle=lg;c.fillRect(A.x-60,ly-60,120,120);
+  c.fillStyle='#E8C987';c.fillRect(A.x-5,ly-8,10,14);c.fillStyle='#3A3226';c.fillRect(A.x-7,ly-11,14,3);c.fillRect(A.x-7,ly+6,14,3);
+  // 布に当たる粒の影
+  if(!reduce){
+    const base=2+4*Math.pow(state.mm,.8);G.dAcc+=Math.min(90,SURF.tent.rate*base*.9)*dt;
+    while(G.dAcc>1){G.dAcc--;if(parts.length>700)continue;
+      let r1=Math.random(),r2=Math.random();if(r1+r2>1){r1=1-r1;r2=1-r2}
+      const x=A.x+r1*(Lb.x-A.x)+r2*(Rb.x-A.x),y=A.y+r1*(Lb.y-A.y)+r2*(Rb.y-A.y);
+      parts.push({type:'dimple',t:0,life:.4,x,y,r:rnd(1.5,3.2)})}
+  }
+}
+function drawCarport(){
+  const {roofY,rx0,ground}=G;
+  c.strokeStyle='rgba(140,155,161,.25)';c.lineWidth=1;c.beginPath();c.moveTo(0,ground);c.lineTo(W,ground);c.stroke();
+  c.fillStyle='#1B2226';c.fillRect(rx0+4,roofY,7,ground-roofY);
+  // 車
+  const cx0=W*.3,cx1=Math.min(W*.9,cx0+H*1.1),bh=H*.11,by=ground-bh-10;
+  c.fillStyle='#1E2529';c.strokeStyle='rgba(140,155,161,.45)';c.lineWidth=1;
+  c.beginPath();c.moveTo(cx0,ground-10);c.lineTo(cx0,by+8);c.quadraticCurveTo(cx0,by,cx0+12,by);c.lineTo(cx0+(cx1-cx0)*.2,by);
+  c.lineTo(cx0+(cx1-cx0)*.32,by-bh*.8);c.lineTo(cx0+(cx1-cx0)*.7,by-bh*.8);c.lineTo(cx0+(cx1-cx0)*.82,by);c.lineTo(cx1-10,by);c.quadraticCurveTo(cx1,by,cx1,by+10);c.lineTo(cx1,ground-10);c.closePath();c.fill();c.stroke();
+  c.fillStyle='#0C1012';for(const f of [.2,.8]){c.beginPath();c.arc(cx0+(cx1-cx0)*f,ground-10,bh*.38,0,TAU);c.fill()}
+  // 屋根（ポリカ波板）
+  c.fillStyle='rgba(214,226,230,.10)';c.fillRect(rx0,roofY-3,W-rx0,9);
+  c.beginPath();for(let x=rx0;x<=W;x+=2){const y=roofY+3*Math.sin(x/15*TAU);x===rx0?c.moveTo(x,y):c.lineTo(x,y)}
+  c.strokeStyle='rgba(214,226,230,.6)';c.lineWidth=1.2;c.stroke();
+  c.fillStyle='rgba(160,172,178,.55)';c.fillRect(rx0,roofY+7,W-rx0,4);
+}
+function drawLeaves(){
+  const t=G.trunk;
+  c.fillStyle='#12181A';c.fillRect(0,G.ground,W,H-G.ground);
+  c.strokeStyle='rgba(140,155,161,.25)';c.lineWidth=1;c.beginPath();c.moveTo(0,G.ground);c.lineTo(W,G.ground);c.stroke();
+  c.strokeStyle='#1E2622';c.lineCap='round';c.lineWidth=12;c.beginPath();c.moveTo(t.x0,H);c.quadraticCurveTo(t.x0+10,H*.65,t.x1,t.y1);c.stroke();
+  c.lineWidth=3;c.beginPath();for(const b of G.branches){c.moveTo(t.x1,t.y1);c.quadraticCurveTo((t.x1+b.x)/2,Math.min(t.y1,b.y)-20,b.x,b.y)}c.stroke();c.lineCap='butt';
+  for(const l of G.leaves){
+    c.save();c.translate(l.x,l.y);c.rotate(l.rot);
+    c.fillStyle=`rgb(${34+l.shade*14|0},${48+l.shade*16|0},${42+l.shade*12|0})`;
+    c.beginPath();c.ellipse(0,0,l.rx,l.ry,0,0,TAU);c.fill();
+    c.strokeStyle='rgba(150,180,160,.25)';c.lineWidth=.8;c.stroke();
+    c.beginPath();c.moveTo(-l.rx*.8,0);c.lineTo(l.rx*.8,0);c.stroke();
+    c.restore();
+  }
+}
+
+let last=0;
+function draw(ts){
+  const dt=Math.min(.05,(ts-last)/1000||0);last=ts;
+  if(!reduce){
+    if(ts/1000>vGustClock){vGustT=rnd(-.4,1)*(.4+.6*heavy());vGustClock=ts/1000+rnd(1.5,4)}
+    vGust+=(vGustT-vGust)*.02;
+    fit();
+  }
+  const w=.05+.08*vGust;
+  c.clearRect(0,0,W,H);
+  if(G.mode==='glass'||G.mode==='inside'){
+    G.mode==='glass'?drawGlass(dt,w):drawTent(dt);
+    drawParts(dt);
+    if(!reduce)requestAnimationFrame(draw);
+    return;
+  }
+  // 遠くの雨
+  if(!reduce)for(const s of far){s.y+=s.spd*dt;s.x+=s.spd*dt*w;if(s.y-s.len>H)spawnFar(s,false)}
+  streaks(far,w,'rgba(190,205,212,.16)',.8);
+  drawSurface();
+  // 手前の雨
+  if(!reduce){
+    for(const s of near){s.y+=s.spd*dt;s.x+=s.spd*dt*w;
+      const hy=hitY(s);if(s.y>=hy){splash(s.x,hy,s);spawn(s,false)}}
+    drips(dt);
+  }
+  c.strokeStyle='rgba(205,218,224,.42)';c.lineWidth=1.1;c.beginPath();
+  for(const s of near){const hy=hitY(s);const y=Math.min(s.y,hy);if(y-s.len>hy)continue;c.moveTo(s.x,y);c.lineTo(s.x-s.len*w,y-s.len)}
+  c.stroke();
+  drawParts(dt);
+  const h=heavy();if(h>.3){c.fillStyle=`rgba(170,188,196,${(h-.3)*.07})`;c.fillRect(0,0,W,H)}
+  if(!reduce)requestAnimationFrame(draw);
+}
+
+new ResizeObserver(resize).observe(scene);
+renderPlay();renderRain();renderSurface();resize();
+if(!reduce)requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
